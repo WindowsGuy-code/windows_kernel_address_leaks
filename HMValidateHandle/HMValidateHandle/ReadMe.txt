@@ -1,3 +1,11 @@
+================
+IMPORTANT NOTICE
+================
+
+This method of leaking the Kernel Address has been patched, most likeley in Windows Build 1809 and anything after.  
+Proof (Windows 10 Pro, 2009, 22631):
+8C 06 11 00 00 00 00 00 C0 BB 07 00 00 00 00 00 18 00 0A 60 00 07 00 80 00 01 00 00 00 00 C0 04. These are the first 32 bytes of tagWND.
+
 ========================================================================
     CONSOLE APPLICATION : HMValidateHandle Project Overview
 ========================================================================
