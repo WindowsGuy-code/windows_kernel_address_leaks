@@ -3,6 +3,8 @@
 
 #include "stdafx.h"
 #include <Windows.h>
+#include <cstdio>
+#include <winternl.h>
 
 #ifdef _WIN64
 typedef void*(NTAPI *lHMValidateHandle)(HWND h, int type);
@@ -10,7 +12,7 @@ typedef void*(NTAPI *lHMValidateHandle)(HWND h, int type);
 typedef void*(__fastcall *lHMValidateHandle)(HWND h, int type);
 #endif
 
-
+typedef NTSTATUS(NTAPI* RtlGetVersion_t)(PRTL_OSVERSIONINFOEXW lpVersionInformation);
 lHMValidateHandle pHmValidateHandle = NULL;
 
 typedef struct _HEAD
@@ -57,11 +59,13 @@ BOOL FindHMValidateHandle() {
 		printf("Failed to find offset of HMValidateHandle from location of 'IsMenu'\n");
 		return FALSE;
 	}
+
+    //FIX: Use uintptr_t since an unsigned int is 32 bits, wich may not be able to hold a 64 bit handle etc.
 	
-	unsigned int addr = *(unsigned int *)(pIsMenu + uiHMValidateHandleOffset);
-	unsigned int offset = ((unsigned int)pIsMenu - (unsigned int)hUser32) + addr;
-	//The +11 is to skip the padding bytes as on Windows 10 these aren't nops
-	pHmValidateHandle = (lHMValidateHandle)((ULONG_PTR)hUser32 + offset + 11);
+    uintptr_t addr = *(uintptr_t*)(pIsMenu + uiHMValidateHandleOffset);
+    uintptr_t relAddr = ((uintptr_t)(pIsMenu + uiHMValidateHandleOffset + 4)) + addr;
+    pHmValidateHandle = (lHMValidateHandle)(relAddr);
+
 	return TRUE;
 }
 
@@ -72,6 +76,28 @@ LRESULT CALLBACK MainWProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 int main()
 {
+    RtlGetVersion_t pRtlGetVersion = (RtlGetVersion_t)GetProcAddress(LoadLibraryW(L"ntdll.dll"), "RtlGetVersion");
+    if (pRtlGetVersion == NULL)
+    {
+        printf("Failed to get address of RtlGetVersion(), exiting\n");
+        return 1;
+    }
+    RTL_OSVERSIONINFOEXW osVersionInfo = {0};
+    osVersionInfo.dwOSVersionInfoSize = sizeof(RTL_OSVERSIONINFOEXW);
+    if (pRtlGetVersion(&osVersionInfo) == 0x00000000)
+    {
+        printf("Build Number: %d\n", osVersionInfo.dwBuildNumber);
+    } else {
+        printf("Failed to get OS version Information, exiting.\n");
+        return 1;
+    }
+    if (osVersionInfo.dwBuildNumber > 1809)
+    {
+        printf("Incompatible OS version, exiting.\n");
+        return 1;
+    }
+
+
 	BOOL bFound = FindHMValidateHandle();
 	if (!bFound) {
 		printf("Failed to locate HmValidateHandle, exiting\n");
@@ -107,4 +133,3 @@ int main()
 #endif
 	return 0;
 }
-
