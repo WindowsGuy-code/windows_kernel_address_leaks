@@ -91,7 +91,7 @@ int main()
         printf("Failed to get OS version Information, exiting.\n");
         return 1;
     }
-    if (osVersionInfo.dwBuildNumber > 1809)
+    if (osVersionInfo.dwBuildNumber > 17074)
     {
         printf("Incompatible OS version, exiting.\n");
         return 1;
