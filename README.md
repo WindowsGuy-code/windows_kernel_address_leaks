@@ -6,4 +6,4 @@ please just commit the answer into this read me file.
 
 ## Fixed:
 - HMValidateHandle
-- NtQuerySystemProcessInformation
+- NtQuerySystemModuleInformation
